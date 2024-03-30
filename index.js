@@ -1,5 +1,5 @@
 const host = "www.dow.com";
-const availableLanguages = ["en-us", "fr-fr", "it-it"];
+const availableLanguages = ["en-us", "fr-fr", "it-it"]; // this is not iso standard but it's just for the example
 const defaultLanguage = "en-us";
 
 Bun.serve({
@@ -11,7 +11,7 @@ Bun.serve({
   
       let fetchUrl = `https://${host}/${path}`;
   
-      // replaces the language in the url by the "defaultLanguage" to fetch the main content
+      // if needed, replace the language in the url by the "defaultLanguage" to fetch the main content
       if (!isDefaultLanguage(requestedLanguage)) {
         fetchUrl = fetchUrl.replace(`${requestedLanguage}`, `${defaultLanguage}`);
       }
@@ -22,13 +22,13 @@ Bun.serve({
       // apply translation only if the "requestedLanguage" is different from the "defaultLanguage"
       // and if the content-type is text/html (to avoid translation of images, css, etc... Which is useless and can break the website)
       if (
-        requestQualifiesForTranslation(res) &&
         !isDefaultLanguage(requestedLanguage)
+        && requestQualifiesForTranslation(res)
       ) {
-        // Replace every url occurences of "defaultLanguage" by the "requestedLanguage"
+        // Replace every occurences of "defaultLanguage" by the "requestedLanguage"
         // to ensure navigating properly with the requested language
-        const regex = new RegExp(`/${defaultLanguage}`, "g");
-        content = content.replace(regex, `/${requestedLanguage}`);
+        const regex = new RegExp(`${defaultLanguage}`, "gi");
+        content = content.replace(regex, `${requestedLanguage}`);
   
         // load the right translation dictionary
         const translationDictionary = await loadTranslationDictionary(
@@ -48,11 +48,12 @@ Bun.serve({
       return new Response(content, {
         headers: {
           "Content-Type": res.headers.get("content-type"),
+          "Content-Language": requestedLanguage,
         },
       });
     }catch(e){
       // If somehow an error occured, return a 500 status code
-      return new Response("An error occured", { status: 500 });
+      return new Response(`An error occured : ${e.message}`, { status: 500 });
     }
   },
 });
@@ -76,8 +77,8 @@ const requestQualifiesForTranslation = (req) => {
 };
 
 // this wasn't expected but it loads the right dictionary for the requested language
-// It's funny to run this code with other languages as well :)
-// You can also try the italian version here : http://localhost:36107/it-it
+// I thought funny to run the website with other languages as well :)
+// For example : you can try the italian version here : http://localhost:36107/it-it
 const loadTranslationDictionary = async (language) => {
   const dictionnary = Bun.file(`./translations/${language}.json`, {
     type: "application/json",
